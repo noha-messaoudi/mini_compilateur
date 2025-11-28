@@ -150,4 +150,16 @@ int line = 1; // compteur de lignes
             etat = suivant;
             i++;
         }
-    }}
+         // -----------------------------
+        // APPEL DE L’ANALYSE SYNTAXIQUE
+        // -----------------------------
+        System.out.println("=== Analyse lexicale ===");
+        Token.printTokens();
+
+        SyntaxParser parser = new SyntaxParser(Token.getTokens());
+        System.out.println("=== Analyse syntaxique ===");
+        parser.Z(); // appel de l’axiome externe
+
+    }
+}
+    
