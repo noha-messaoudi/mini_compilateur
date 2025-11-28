@@ -4,10 +4,6 @@
  */
 package compilateur;
 
-/**
- *
- * @author InfoPro
- */
 import java.util.Scanner;
 
 

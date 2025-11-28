@@ -4,12 +4,7 @@
  */
 package compilateur;
 
-/**
- *
- * @author InfoPro
- */
 public class Token {
-    
 
     public String type;
     public String value;
