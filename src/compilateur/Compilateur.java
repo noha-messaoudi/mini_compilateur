@@ -4,12 +4,18 @@
  */
 package compilateur;
 
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.IOException;
+
 /**
  *
  * @author InfoPro
  */
+
 public class Compilateur {
-  // -----------------------------
+
+    // -----------------------------
     // TABLEAUX des mots-clés, opérateurs, séparateurs
     // -----------------------------
     static String[] keywords = {
@@ -59,134 +65,109 @@ public class Compilateur {
         return 5; // autres
     }
 
-    // ------------------------------------------------------------
-    // Vérification appartenance aux tableaux
-    // ------------------------------------------------------------
+    // -----------------------------
+    // Vérification appartenance
+    // -----------------------------
     static boolean inOperators(char c) {
- for (int j = 0; j < operators.length; j++) {
-    char op =  operators[j];  
-    if( op == c) {            
-        return true;         
-    }}
- return false;}
- static boolean inSeparators(char c) {
-   for (int j = 0; j < separators.length; j++) {
-    char s = separators[j];  
-    if (s == c) {            
-        return true;         
-    }}
- return false;}
-
-
- 
-    static boolean inKeywords(String w) {
-        for (String k : keywords) if (k.equals(w)) return true;
-        for (String k : customKeywords) if (k.equals(w)) return true;
+        for (char op : operators) {
+            if (op==c ) {
+                return true;
+            }
+        }
         return false;
     }
 
-        
+    static boolean inSeparators(char c) {
+        for (char s : separators) {
+            if (s == c) {
+                return true;
+            }
+        }
+        return false;
+    }
 
+    static boolean inKeywords(String w) {
+        for (String k : keywords) {
+            if (k.equals(w)) {
+                return true;
+            }
+        }
+        for (String k : customKeywords) {
+            if (k.equals(w)) {
+                return true;
+            }
+        }
+        return false;
+    }
 
-    // ------------------------------------------------------------
+    // -----------------------------
     // Gestion des commentaires
-    // ------------------------------------------------------------
+    // -----------------------------
     static int skipComment(String code, int i) {
-        int n = code.length();
-
-        // commentaire //
-        if (i+1<n && code.charAt(i)=='/' && code.charAt(i+1)=='/') {
+        // commentaire ligne //
+        if (i < code.length() - 1 && code.charAt(i) == '/' && code.charAt(i + 1) == '/') {
             i += 2;
-            while (i<n && code.charAt(i)!='\n') i++;
+            while (i < code.length() && code.charAt(i) != '\n') {
+                i++;
+            }
             return i;
         }
-
-        // commentaire /* ... */
-        if (i+1<n && code.charAt(i)=='/' && code.charAt(i+1)=='*') {
+        // commentaire bloc /* ... */
+        if (i < code.length() - 1 && code.charAt(i) == '/' && code.charAt(i + 1) == '*') {
             i += 2;
-            while (i+1<n && !(code.charAt(i)=='*' && code.charAt(i+1)=='/')) i++;
-            return i+2;
+            while (i < code.length() - 1) {
+                if (code.charAt(i) == '*' && code.charAt(i + 1) == '/') {
+                    i += 2;
+                    break;
+                }
+                i++;
+            }
+            return i;
         }
-
         return i;
     }
 
-    // ------------------------------------------------------------
-    // Classification finale d’un mot
-    // ------------------------------------------------------------
-    static void classify(String mot) {
-
-    if (mot.length() == 0) return; // rien à classer
-
-    boolean trouvé = false; // indicateur si on a trouvé le type
-
-    // ------------------------
-    // Vérification mots-clés
-    // ------------------------
-    for (int i = 0; i < keywords.length; i++) {
-        if (mot.equals(keywords[i])) {
-            System.out.println("KEYWORD     : " + mot);
-            trouvé = true;
-            break;
+    // -----------------------------
+    // Classification finale
+    // -----------------------------
+   
+    static void classify(String mot,int line) {
+        if (mot.length() == 0) {
+            return;
         }
-    }
-    if (!trouvé) {
-        for (int i = 0; i < customKeywords.length; i++) {
-            if (mot.equals(customKeywords[i])) {
-                System.out.println("KEYWORD     : " + mot);
-                trouvé = true;
-                break;
-            }
-        }
-    }
+       
 
-    // ------------------------
-    // Vérification nombre
-    // ------------------------
-    if (!trouvé) {
+        if (inKeywords(mot)) {
+            Token.addToken("KEYWORD", mot, line);
+            return;
+        }
+
         boolean allDigits = true;
-        for (int i = 0; i < mot.length(); i++) {
-            char c = mot.charAt(i);
+        for (char c : mot.toCharArray()) {
             if (!(c >= '0' && c <= '9')) {
                 allDigits = false;
                 break;
             }
         }
         if (allDigits) {
-            System.out.println("NUMBER      : " + mot);
-            trouvé = true;
+            Token.addToken("NUMBER", mot, line);
+            return;
         }
-    }
 
-    // ------------------------
-    // Vérification chaîne
-    // ------------------------
-    if (!trouvé) {
-        if (mot.charAt(0) == '"' && mot.charAt(mot.length() - 1) == '"') {
-            System.out.println("STRING      : " + mot);
-            trouvé = true;
+        if (mot.startsWith("\"") && mot.endsWith("\"")) {
+            Token.addToken("STRING", mot, line);
+            return;
         }
-    }
 
-    // ------------------------
-    // Vérification identificateur
-    // ------------------------
-    if (!trouvé) {
         char c0 = mot.charAt(0);
         if ((c0 >= 'a' && c0 <= 'z') || (c0 >= 'A' && c0 <= 'Z') || c0 == '_') {
-            System.out.println("IDENTIFIER  : " + mot);
-            trouvé = true;
+            Token.addToken("IDENTIFIER", mot, line);
+
+            return;
         }
+
+        Token.addToken("UNKNOWN", mot, line);
+
     }
 
-    // ------------------------
-    // Sinon → token inconnu
-    // ------------------------
-    if (!trouvé) {
-       System.out.println("token iconnu  : " + mot);
-    }}}
-
-    
-    
-    
-
+}

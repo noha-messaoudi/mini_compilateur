@@ -10,122 +10,144 @@ import static compilateur.Compilateur.inOperators;
 import static compilateur.Compilateur.inSeparators;
 import static compilateur.Compilateur.mat;
 import static compilateur.Compilateur.skipComment;
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.IOException;
 import java.util.Scanner;
-
+import compilateur.SyntaxParser;
 /**
  *
  * @author InfoPro
  */
 public class Main {
-  // ------------------------------------------------------------
-    // PROGRAMME PRINCIPAL
-    // ------------------------------------------------------------
-    public static void main(String[] args) {
 
-        Scanner sc = new Scanner(System.in);
+    public static void main(String[] args) {
         String code = "";
 
-        System.out.println("Écris ton programme Java :");
-        System.out.println("(Ligne vide = fin)\n");
-
-        while (true) {
-            String ligne = sc.nextLine();
-
-            if (ligne.equals("")) break;
-
-            code += ligne + "\n";
+        // Lecture du fichier texte
+        try {
+            BufferedReader br = new BufferedReader(new FileReader("src/compilateur/programme.txt"));
+            String ligne;
+            while ((ligne = br.readLine()) != null) {
+                code = code + ligne + "\n";
+            }
+            br.close();
+        } catch (IOException e) {
+            System.out.println("Erreur lecture fichier : " + e.getMessage());
+            return;
         }
 
-        int i = 0, n = code.length();
+        // Ajout du sentinelle #
+        code = code + "#";
+boolean inString = false;
+        int i = 0;
         int etat = 0;
         String mot = "";
+int line = 1; // compteur de lignes
+        while (true) {
+            char c = code.charAt(i);
+            if (c == '\n') {
+        line++; // incrémenter à chaque saut de ligne
+        i++;
+        continue;
+    }
+// ✅ Vérification de fin de chaîne
+            if (c == '#') {
+               Compilateur.classify(mot,line); // dernier mot accumulé
+                Token.addToken("EOF", "#",line); // ajout du token de fin
+                break; // sortir de la boucle
+            }
+            if (!inString && c == '"') {
+        // terminer le mot en cours s’il existe
+        Compilateur.classify(mot,line);
+        mot = "";
+        inString = true;
+        mot = "\""; // commence la chaîne
+        i++;
+        continue;
+    }
 
-        while (i < n) {
+    // lecture de chaîne jusqu’au prochain "
+    if (inString) {
+        mot += c;
+        if (c == '"') {
+            // fin de chaîne rencontrée
+            Compilateur.classify(mot,line); // sera classé comme STRING
+            mot = "";
+            inString = false;
+        }
+        i++;
+        continue;
+    }
 
             i = skipComment(code, i);
-            if (i >= n) break;
+            if (i >= code.length()) {
+                break;
+            }
+            c = code.charAt(i);
 
-            char c = code.charAt(i);
             int colonne = col(c);
             int suivant = mat[etat][colonne];
 
-            // -------------------------------
-            // CAS : opérateur simple
-            // -------------------------------
-            if (inOperators(c)) {
-                classify(mot);
-                mot = "";
-                System.out.println("OPERATOR    : " + c);
-                etat = 0;
-               i++;
-         
-continue;
-            }
+           if (inOperators(c)) {
+    classify(mot,line);
+    mot = "";
 
-            // -------------------------------
-            // CAS : séparateur
-            // -------------------------------
+    // Vérifier les opérateurs composés
+    if (c == '=' && i + 1 < code.length() && code.charAt(i + 1) == '=') {
+        Token.addToken("OPERATOR", "==",line);
+        i += 2; // avancer de deux caractères
+    } else if (c == '!' && i + 1 < code.length() && code.charAt(i + 1) == '=') {
+        Token.addToken("OPERATOR", "!=",line);
+        i += 2;
+    } else if (c == '<' && i + 1 < code.length() && code.charAt(i + 1) == '=') {
+        Token.addToken("OPERATOR", "<=",line);
+        i += 2;
+    } else if (c == '>' && i + 1 < code.length() && code.charAt(i + 1) == '=') {
+        Token.addToken("OPERATOR", ">=",line);
+        i += 2;
+        } else if (c == '&' && i + 1 < code.length() && code.charAt(i + 1) == '&') {
+        Token.addToken("OPERATOR", "&&",line); i += 2;
+    } else if (c == '|' && i + 1 < code.length() && code.charAt(i + 1) == '|') {
+        Token.addToken("OPERATOR", "||",line); i += 2;
+    } else {
+        // opérateurs simples
+        Token.addToken("OPERATOR", String.valueOf(c),line);
+        i++;
+    }
+
+    etat = 0;
+    continue;
+}
+
+
             if (inSeparators(c)) {
-                classify(mot);
+                classify(mot,line);
                 mot = "";
-                System.out.println("SEPARATOR   : " + c);
+                Token.addToken("SEPARATOR", String.valueOf(c),line);
                 etat = 0;
                 i++;
-         
-continue;
+                continue;
             }
 
-            // -------------------------------
-            // CAS : espace → fin de mot
-            // -------------------------------
-            if (colonne == 3) {
-                classify(mot);
+            if (colonne == 4) {
+                classify(mot,line);
                 mot = "";
                 etat = 0;
                 i++;
-        
-continue;
+                continue;
             }
 
-            // -------------------------------
-            // CAS : transition impossible
-            // -------------------------------
             if (suivant == -1) {
-                classify(mot);
+                classify(mot,line);
                 mot = "";
                 etat = 0;
                 i++;
-        
-continue;
+                continue;
             }
 
-            // -------------------------------
-            // AJOUT DU CARACTÈRE AU MOT
-            // -------------------------------
-            mot += c;
+            mot = mot + c;
             etat = suivant;
             i++;
-
-            // -------------------------------
-            // FIN DU MOT ?  
-            // si le prochain caractère est incompatible
-            // -------------------------------
-            if (i < n) {
-                char next = code.charAt(i);
-                int colNext = col(next);
-
-                if (colNext == 3            // espace
-                 || inOperators(next)       // opérateur
-                 || inSeparators(next)) {   // séparateur
-
-                    classify(mot);
-                    mot = "";
-                    etat = 0;
-                }
-            }
         }
-
-        // dernier mot
-        classify(mot);
-    }}  
-
+    }}
